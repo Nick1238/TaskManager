@@ -27,30 +27,32 @@ class TaskManager:
         self.stdscr.nodelay(True)
         curses.curs_set(0)
         while True:
-            draw_table(self.stdscr, self.tasks, self.active_field)
+            draw_table(self.stdscr, self.tasks, self.active_field, self.show_finished)
             a = self.stdscr.getch()
             if a == ord("e"):
                 self.add_task()
-            elif a == ord("s"):
-                self.stop_resume_task()
-            elif a == ord("d"):
-                self.delete_task()
-            elif a == ord("r"):
-                self.update_task_name()
-            elif a == ord("x"):
-                self.finish_task()
             elif a == ord("f"):
                 self.switch_tasks()
-            elif a == curses.KEY_UP:
-                self.active_field -= 1
-                if self.active_field < 0:
-                    self.active_field = len(self.tasks) - 1
-            elif a == curses.KEY_DOWN:
-                self.active_field += 1
-                if self.active_field >= len(self.tasks):
-                    self.active_field = 0
             elif a == ord("q"):
                 break
+            if self.tasks:
+                if a == ord("s"):
+                    self.stop_resume_task()
+                elif a == ord("d"):
+                    self.delete_task()
+                elif a == ord("r"):
+                    self.update_task_name()
+                elif a == ord("x"):
+                    self.finish_task()
+
+                elif a == curses.KEY_UP:
+                    self.active_field -= 1
+                    if self.active_field < 0:
+                        self.active_field = len(self.tasks) - 1
+                elif a == curses.KEY_DOWN:
+                    self.active_field += 1
+                    if self.active_field >= len(self.tasks):
+                        self.active_field = 0
             time.sleep(0.01)
 
     def finish_task(self):
@@ -63,6 +65,7 @@ class TaskManager:
     def switch_tasks(self):
         self.show_finished = not self.show_finished
         self.__update_tasks_list()
+        self.active_field = 0
 
     def add_task(self):
         task_name = get_task_name(self.stdscr)
@@ -87,8 +90,10 @@ class TaskManager:
     def delete_task(self):
         task = self.tasks[self.active_field]
         if confirmation(self.stdscr, "удалить", task.name):
-            self.database.delete_task(task.name)
-            self.__update_tasks_list()
+            if self.database.delete_task(task.name):
+                self.__update_tasks_list()
+            else:
+                error_screen(self.stdscr, "Ошибка базы данных")
 
     def update_task_name(self):
         task = self.tasks[self.active_field]
@@ -104,3 +109,5 @@ class TaskManager:
 
     def __update_tasks_list(self):
         self.tasks = self.database.fetch_all_tasks(self.show_finished)
+        if len(self.tasks) <= self.active_field:
+            self.active_field = len(self.tasks) - 1

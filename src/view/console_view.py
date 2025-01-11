@@ -38,7 +38,7 @@ def get_task_name(stdscr: curses.window, message: str = "Введите имя �
     return task_name
 
 
-def draw_table(stdscr: curses.window, tasks: list, active_field):
+def draw_table(stdscr: curses.window, tasks: list, active_field, finished):
     stdscr.clear()
     h, w = stdscr.getmaxyx()
     max_rows = h - 2
@@ -47,33 +47,24 @@ def draw_table(stdscr: curses.window, tasks: list, active_field):
         stdscr.addstr(0, 0, "Недостаточный размер экрана", curses.A_BOLD)
         stdscr.refresh()
         return
-    if tasks:
-        if tasks[0].finished:
-            header = "Завершенные задачи"
-        else:
-            header = "Текущие задачи"
-        stdscr.addstr(
-            1, 1, header.ljust(max_columns), curses.A_BOLD | curses.color_pair(3)
-        )
-        stdscr.addstr(2, 1, "Задача".ljust(41), curses.A_BOLD | curses.color_pair(2))
-        stdscr.addstr(
-            2, 42, "Время выполнения".ljust(18), curses.A_BOLD | curses.color_pair(2)
-        )
-        stdscr.addstr(
-            2,
-            60,
-            "Активна".ljust(max_columns - 59),
-            curses.A_BOLD | curses.color_pair(2),
-        )
+
+    if finished:
+        header = "Завершенные задачи"
     else:
-        stdscr.addstr(
-            1,
-            1,
-            "Нет задач для отслеживания, добавьте задачи с помощью кнопки 'e'".ljust(
-                max_columns
-            ),
-            curses.A_BOLD | curses.color_pair(3),
-        )
+        header = "Текущие задачи"
+    stdscr.addstr(
+        1, 1, header.ljust(max_columns), curses.A_BOLD | curses.color_pair(3)
+    )
+    stdscr.addstr(
+        2, 1, "Задача".ljust(41), curses.A_BOLD | curses.color_pair(2)
+    )
+    stdscr.addstr(
+        2, 42, "Время выполнения".ljust(18), curses.A_BOLD | curses.color_pair(2)
+    )
+    stdscr.addstr(
+        2, 60, "Активна".ljust(max_columns - 59), curses.A_BOLD | curses.color_pair(2)
+    )
+
     for i, task in enumerate(tasks):
         row = i + 3
         if row >= max_rows:
@@ -118,6 +109,6 @@ def print_help(stdscr: curses.window):
         stdscr.addstr(
             h - 3,
             1,
-            "'e'-добавить 's'-пауза/продолжить 'd'-удалить 'r'-переименовать"[: w - 2],
+            "'e'-добавить 's'-пауза/продолжить 'd'-удалить 'r'-переименовать"[: w - 2].ljust(w - 2),
         )
-        stdscr.addstr(h - 2, 1, "'x'-завершить 'f'-текущие/завершенные 'q'-выход ")
+        stdscr.addstr(h - 2, 1, "'x'-завершить 'f'-текущие/завершенные 'q'-выход ".ljust(w - 2))
