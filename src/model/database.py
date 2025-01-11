@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
-from model.task_model import Base, TaskModel
+from sqlalchemy.orm import sessionmaker
+
 from model.task import Task
+from model.task_model import Base, TaskModel
+
 
 class Database:
     def __init__(self, db_url="sqlite:///tasks.db"):
@@ -16,8 +18,9 @@ class Database:
             session.add(task_model)
             try:
                 session.commit()
+                return True
             except IntegrityError:
-                pass
+                return False
 
     def update_task(self, task_name: str, task: Task) -> bool:
         with self.Session() as session:
@@ -27,7 +30,7 @@ class Database:
                     "start_time": task.start_time,
                     "total_time": task.total_time,
                     "running": task.running,
-                    "finished": task.finished
+                    "finished": task.finished,
                 }
                 for key, value in updates.items():
                     setattr(task_model, key, value)
@@ -50,10 +53,12 @@ class Database:
 
     def fetch_all_tasks(self, finished=False):
         with self.Session() as session:
-            task_models = session.query(TaskModel).order_by(TaskModel.running.desc()).filter_by(finished=finished)
+            task_models = (
+                session.query(TaskModel)
+                .order_by(TaskModel.running.desc())
+                .filter_by(finished=finished)
+            )
             return [task_model.to_task() for task_model in task_models]
-    
-    
 
     def get_task_by_name(self, task_name):
         with self.Session() as session:

@@ -1,8 +1,6 @@
-from datetime import datetime
-from model.task import Task
-from model.database import Database
 import curses
 import time
+
 
 def error_screen(stdscr: curses.window, message: str):
     stdscr.clear()
@@ -10,54 +8,82 @@ def error_screen(stdscr: curses.window, message: str):
     stdscr.border()
     stdscr.refresh()
     time.sleep(2)
-    
 
-def user_input(stdscr: curses.window):
+
+def print_options(stdscr: curses.window):
     pass
 
 
-def get_task_name(stdscr: curses.window):
-    curses.echo() 
+def get_task_name(stdscr: curses.window, message: str = "Введите имя задачи: "):
+    curses.echo()
+    curses.curs_set(1)
     stdscr.clear()
     stdscr.nodelay(False)
-
-    stdscr.addstr(3, 1, "Введите имя задачи: ")
-    stdscr.border()
-    stdscr.refresh()
-    task_name = stdscr.getstr(4, 1, 40).decode('utf-8')  # Считываем строку, максимум 40 символов
-
-
-    curses.noecho()
+    stdscr.addstr(3, 1, message)
+    stdscr.border(0)
+    task_name = stdscr.getstr(4, 1, 40).decode("utf-8")
+    curses.curs_set(0)
     stdscr.nodelay(True)
+    curses.noecho()
     return task_name
 
 
-def draw_table(stdscr: curses.window, tasks: list[Task]):
+def draw_table(stdscr: curses.window, tasks: list, active_field):
     stdscr.clear()
-    h, w = stdscr.getmaxyx()  # Получаем размеры окна
-    max_rows = h - 2  # Оставляем место для заголовков
-    max_columns = w - 2  # Оставляем место для рамки
-    if w < 40:
+    h, w = stdscr.getmaxyx()
+    max_rows = h - 2
+    max_columns = w - 2
+    if max_columns < 60:
         stdscr.addstr(0, 0, "Недостаточный размер экрана", curses.A_BOLD)
         stdscr.refresh()
         return
-
-    stdscr.addstr(1, 1, "Задача", curses.A_BOLD)
-    stdscr.addstr(1, 20, "Время выполнения", curses.A_BOLD)
-    stdscr.addstr(1, 40, "Активна ли", curses.A_BOLD)
-    # stdscr.addstr(0, 55, "Важность", curses.A_BOLD)
-    
-    stdscr.border()
-    
-    # Выводим данные задач в таблице
+    if tasks:
+        if tasks[0].finished:
+            header = "Завершенные задачи"
+        else:
+            header = "Текущие задачи"
+        stdscr.addstr(1, 1, header.ljust(max_columns), curses.A_BOLD | curses.color_pair(3))
+        stdscr.addstr(2, 1, "Задача".ljust(41), curses.A_BOLD | curses.color_pair(2))
+        stdscr.addstr(2, 42, "Время выполнения".ljust(18), curses.A_BOLD | curses.color_pair(2))
+        stdscr.addstr(2, 60, "Активна".ljust(max_columns - 59), curses.A_BOLD | curses.color_pair(2))
+    else:
+        stdscr.addstr(1, 1, "Нет задач для отслеживания, добавьте задачи с помощью кнопки \'e\'".ljust(max_columns), curses.A_BOLD | curses.color_pair(3))
     for i, task in enumerate(tasks):
-        row = i + 2  # Строки начинаются с 2, чтобы не перезаписать заголовки
-
+        row = i + 3
         if row >= max_rows:
-            break  # Прекращаем вывод, если вышли за пределы экрана
-
-        stdscr.addstr(row, 1, task.name[:15].ljust(15))  # Название задачи (до 15 символов)
-        stdscr.addstr(row, 20, f"{task.elapsed_time():.0f} сек".ljust(15))  # Время выполнения
-        stdscr.addstr(row, 40, "Да" if task.running else "Нет", curses.A_BOLD)  # Статус
-    
+            break
+        col_pair = i % 2 + 1 if i != active_field else 4
+        stdscr.addstr(row, 1, task.name.ljust(41), curses.color_pair(col_pair))
+        stdscr.addstr(row, 42, format_elapsed_time(task.elapsed_time()).ljust(18), curses.color_pair(col_pair))
+        stdscr.addstr(row, 60, ("Да" if task.running else "Нет").ljust(max_columns - 59), curses.color_pair(col_pair))
+    stdscr.border()
+    print_help(stdscr)
     stdscr.refresh()
+
+
+
+def format_elapsed_time(seconds):
+    """
+    Форматирует время в зависимости от продолжительности.
+
+    :param seconds: Время в секундах.
+    :return: Отформатированная строка.
+    """
+    if seconds < 60:
+        return f"{int(seconds)}сек"
+    minutes, seconds = divmod(seconds, 60)
+    if minutes < 60:
+        return f"{int(minutes)}мин {int(seconds)}сек"
+    hours, minutes = divmod(minutes, 60)
+    if hours < 24:
+        return f"{int(hours)}ч {int(minutes)}мин {int(seconds)}сек"
+    days, hours = divmod(hours, 24)
+    return f"{int(days)}д {int(hours)}ч {int(minutes)}мин"
+
+
+def print_help(stdscr: curses.window):
+    h, w = stdscr.getmaxyx()
+    for i in range(1, w - 1):
+        stdscr.addch(h - 4, i, "─")
+    stdscr.addstr(h - 3, 1, "\'e\'-добавить \'s\'-пауза/продолжить \'d\'-удалить \'r\'-переименовать"[:w - 2])
+    stdscr.addstr(h - 2, 1, "\'x\'-завершить \'f\'-текущие/завершенные \'q\'-выход ")
