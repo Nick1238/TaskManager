@@ -38,10 +38,9 @@ class Database:
                     session.commit()
                     return True
                 except IntegrityError:
-                    pass
-            return False
+                    return False
 
-    def delete_task(self, task_name):
+    def delete_task(self, task_name: str) -> bool:
         with self.Session() as session:
             task_model = session.query(TaskModel).filter_by(name=task_name).first()
             if task_model:
@@ -60,7 +59,7 @@ class Database:
             )
             return [task_model.to_task() for task_model in task_models]
 
-    def get_task_by_name(self, task_name):
+    def get_task_by_name(self, task_name) -> Task | None:
         with self.Session() as session:
             task_model = session.query(TaskModel).filter_by(name=task_name).first()
             if task_model:

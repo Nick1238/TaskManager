@@ -32,7 +32,7 @@ class Task:
         else:
             elapsed = 0.0
         return self.total_time + elapsed
-    
+
     def __str__(self):
         status = "Running" if self.running else "Stopped"
         elapsed = self.elapsed_time()
