@@ -205,4 +205,4 @@ class TaskManager:
         """
         self.__tasks = self.__database.fetch_all_tasks(self.__show_finished)
         if len(self.__tasks) <= self.__active_field:
-            self.__active_field = len(self.__tasks) - 1
+            self.__active_field = max(len(self.__tasks) - 1, 0)
