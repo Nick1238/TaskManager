@@ -17,8 +17,8 @@
 
 1. Клонируйте репозиторий:
     ```bash
-    git@github.com:Nick1238/TaskManager.git
-    cd task-manager
+    git clone git@github.com:Nick1238/TaskManager.git
+    cd TaskManager
     ```
 
 2. Создайте виртуальное окружение и установите зависимости:
