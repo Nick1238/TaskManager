@@ -28,21 +28,36 @@ class Task:
         return self.__finished
 
     def stop(self):
+        """
+        Останавливает задачу, вычисляя и добавляя время, прошедшее с момента её начала.
+        Задача помечается как остановленная.
+        """
         if self.__running:
             elapsed = (datetime.now() - self.__start_time).total_seconds()
             self.__total_time += elapsed
             self.__running = False
 
     def finish(self):
+        """
+        Завершает задачу. Задача помечается как завершенная и останавливается.
+        """
         self.__finished = True
         self.stop()
 
     def resume(self):
+        """
+        Возобновляет задачу, если она была остановлена.
+        """
         if not self.__running:
             self.__start_time = datetime.now()
             self.__running = True
 
     def elapsed_time(self):
+        """
+        Возвращает общее время, прошедшее с момента начала задачи.
+
+        :return: Общее время, прошедшее с момента начала задачи
+        """
         if self.__running:
             elapsed = (datetime.now() - self.__start_time).total_seconds()
         else:

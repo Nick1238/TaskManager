@@ -9,6 +9,9 @@ Base = declarative_base()
 
 
 class TaskModel(Base):
+    """
+    ORM Модель задачи
+    """
     __tablename__ = "tasks"
     name = Column(String, primary_key=True)
     start_time = Column(String)
