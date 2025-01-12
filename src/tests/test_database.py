@@ -1,7 +1,9 @@
-import pytest
 from datetime import datetime
-from model.task import Task
+
+import pytest
+
 from model.database import Database
+from model.task import Task
 
 
 @pytest.fixture

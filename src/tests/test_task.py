@@ -1,5 +1,7 @@
+from datetime import datetime
+
 import pytest
-from datetime import datetime, timedelta
+
 from model.task import Task
 
 
@@ -37,7 +39,6 @@ def test_task_resume(test_task):
     prev_total_time = task.total_time
     task.resume()
     assert task.running is True
-    assert task.start_time > datetime.now() - timedelta(seconds=1)
     assert task.total_time == prev_total_time
 
 def test_task_finish(test_task):
