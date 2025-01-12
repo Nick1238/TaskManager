@@ -74,7 +74,7 @@ class TaskManager:
         task = self.__tasks[self.__active_field]
         if confirmation(self.__stdscr, "завершить", task.name):
             task.finish()
-            self.database.update_task(task.name, task)
+            self.__database.update_task(task.name, task)
             self.__update_tasks_list()
 
     def switch_tasks(self):
@@ -88,7 +88,7 @@ class TaskManager:
             error_screen(self.__stdscr, "Пустой ввод или ошибка кодировки")
             return
         new_task = Task(task_name)
-        if self.database.add_task(new_task):
+        if self.__database.add_task(new_task):
             self.__update_tasks_list()
         else:
             error_screen(self.__stdscr, "Задача с данным именем уже существует")
@@ -104,7 +104,7 @@ class TaskManager:
                 task.stop()
             else:
                 task.resume()
-            self.database.update_task(task.name, task)
+            self.__database.update_task(task.name, task)
             self.__update_tasks_list()
 
     def delete_task(self):
@@ -112,7 +112,7 @@ class TaskManager:
             return
         task = self.__tasks[self.__active_field]
         if confirmation(self.__stdscr, "удалить", task.name):
-            if self.database.delete_task(task.name):
+            if self.__database.delete_task(task.name):
                 self.__update_tasks_list()
             else:
                 error_screen(self.__stdscr, "Ошибка базы данных")
@@ -128,7 +128,7 @@ class TaskManager:
                 return
             task_name = task.name
             task.name = new_name
-            if self.database.update_task(task_name, task):
+            if self.__database.update_task(task_name, task):
                 self.__update_tasks_list()
             else:
                 task.name = task_name
@@ -145,6 +145,6 @@ class TaskManager:
             self.__active_field = 0
 
     def __update_tasks_list(self):
-        self.__tasks = self.database.fetch_all_tasks(self.__show_finished)
+        self.__tasks = self.__database.fetch_all_tasks(self.__show_finished)
         if len(self.__tasks) <= self.__active_field:
             self.__active_field = len(self.__tasks) - 1
