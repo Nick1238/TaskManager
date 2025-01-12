@@ -5,6 +5,15 @@ class Task:
     def __init__(
         self, name, start_time=None, total_time=0.0, running=True, finished=False
     ):
+        """
+        Конструктор для создания новой задачи.
+
+        :param name: Название задачи
+        :param start_time: Время начала задачи (по умолчанию текущее время)
+        :param total_time: Общее время, потраченное на задачу до start_time
+        :param running: Статус активности задачи (по умолчанию True)
+        :param finished: Статус завершенности задачи (по умолчанию False)
+        """
         self.name = name
         self.__start_time = start_time or datetime.now()
         self.__total_time = total_time
