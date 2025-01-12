@@ -20,7 +20,8 @@ class Database:
                 session.commit()
                 return True
             except IntegrityError:
-                return False
+                pass
+        return False
 
     def update_task(self, task_name: str, task: Task) -> bool:
         with self.Session() as session:
@@ -38,7 +39,8 @@ class Database:
                     session.commit()
                     return True
                 except IntegrityError:
-                    return False
+                    pass
+        return False
 
     def delete_task(self, task_name: str) -> bool:
         with self.Session() as session:

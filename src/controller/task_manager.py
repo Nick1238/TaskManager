@@ -34,8 +34,8 @@ class TaskManager:
     def __init__(self, stdscr: curses.window, db_url="sqlite:///tasks.db"):
         self.__database = Database(db_url)
         self.__stdscr = stdscr
-        self.__active_field = 0
         self.__tasks = self.__database.fetch_all_tasks()
+        self.__active_field = 0
         self.__show_finished = False
         self.__stdscr.nodelay(True)
         init_colors()
