@@ -2,6 +2,18 @@ import curses
 import time
 
 
+def init_colors():
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, 236)
+    curses.init_pair(2, curses.COLOR_WHITE, 233)
+    curses.init_pair(3, 26, curses.COLOR_WHITE)
+    curses.init_pair(4, 233, curses.COLOR_WHITE)
+    curses.init_pair(5, 248, 236)
+    curses.init_pair(6, 248, 233)
+    curses.init_pair(7, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.curs_set(0)
+
+
 def error_screen(stdscr: curses.window, message: str):
     stdscr.clear()
     stdscr.addstr(3, 1, message)
@@ -31,7 +43,10 @@ def get_task_name(stdscr: curses.window, message: str = "Введите имя �
     stdscr.nodelay(False)
     stdscr.addstr(3, 1, message)
     stdscr.border(0)
-    task_name = stdscr.getstr(4, 1, 40).decode("utf-8")
+    try:
+        task_name = stdscr.getstr(4, 1, 40).decode("utf-8")
+    except UnicodeDecodeError:
+        task_name = ""
     curses.curs_set(0)
     stdscr.nodelay(True)
     curses.noecho()
@@ -43,31 +58,14 @@ def draw_table(stdscr: curses.window, tasks: list, active_field, finished):
     h, w = stdscr.getmaxyx()
     max_rows = h - 2
     max_columns = w - 2
-    if max_columns < 60 or max_rows < 1:
-        stdscr.addstr(0, 0, "Недостаточный размер экрана", curses.A_BOLD)
+    if max_columns < 60 or max_rows < 3:
+        stdscr.addstr(0, 0, "Недостаточный размер окна", curses.A_BOLD)
         stdscr.refresh()
         return
-
-    if finished:
-        header = "Завершенные задачи"
-    else:
-        header = "Текущие задачи"
-    stdscr.addstr(
-        1, 1, header.ljust(max_columns), curses.A_BOLD | curses.color_pair(3)
-    )
-    stdscr.addstr(
-        2, 1, "Задача".ljust(41), curses.A_BOLD | curses.color_pair(2)
-    )
-    stdscr.addstr(
-        2, 42, "Время выполнения".ljust(18), curses.A_BOLD | curses.color_pair(2)
-    )
-    stdscr.addstr(
-        2, 60, "Активна".ljust(max_columns - 59), curses.A_BOLD | curses.color_pair(2)
-    )
-
+    draw_header(stdscr, max_columns, finished)
     for i, task in enumerate(tasks):
         row = i + 3
-        if row >= max_rows:
+        if row > max_rows:
             break
         col_pair = i % 2 + (5, 1)[task.running] if i != active_field else 4
         stdscr.addstr(row, 1, task.name.ljust(41), curses.color_pair(col_pair))
@@ -88,6 +86,21 @@ def draw_table(stdscr: curses.window, tasks: list, active_field, finished):
     stdscr.refresh()
 
 
+def draw_header(stdscr: curses.window, max_columns: int, finished: bool):
+    if finished:
+        header = "Завершенные задачи"
+    else:
+        header = "Текущие задачи"
+    stdscr.addstr(1, 1, header.ljust(max_columns), curses.A_BOLD | curses.color_pair(3))
+    stdscr.addstr(2, 1, "Задача".ljust(41), curses.A_BOLD | curses.color_pair(2))
+    stdscr.addstr(
+        2, 42, "Время выполнения".ljust(18), curses.A_BOLD | curses.color_pair(2)
+    )
+    stdscr.addstr(
+        2, 60, "Активна".ljust(max_columns - 59), curses.A_BOLD | curses.color_pair(2)
+    )
+
+
 def format_elapsed_time(seconds):
     if seconds < 60:
         return f"{int(seconds)}сек"
@@ -103,12 +116,18 @@ def format_elapsed_time(seconds):
 
 def print_help(stdscr: curses.window):
     h, w = stdscr.getmaxyx()
-    if h > 6:
+    if h > 8:
         for i in range(1, w - 1):
             stdscr.addch(h - 4, i, "─")
         stdscr.addstr(
             h - 3,
             1,
-            "'e'-добавить 's'-пауза/продолжить 'd'-удалить 'r'-переименовать"[: w - 2].ljust(w - 2),
+            "'e'-добавить 's'-пауза/продолжить 'd'-удалить 'r'-переименовать"[
+                : w - 2
+            ].ljust(w - 2),
         )
-        stdscr.addstr(h - 2, 1, "'x'-завершить 'f'-текущие/завершенные 'q'-выход ".ljust(w - 2))
+        stdscr.addstr(
+            h - 2,
+            1,
+            "'↑↓'-выбор 'x'-завершить 'f'-текущие/завершенные 'q'-выход ".ljust(w - 2),
+        )

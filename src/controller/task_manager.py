@@ -1,84 +1,104 @@
 import curses
 import time
+from enum import Enum
 
 from model.database import Database
 from model.task import Task
-from view.console_view import confirmation, draw_table, error_screen, get_task_name
+from view.console_view import (confirmation, draw_table, error_screen,
+                               get_task_name, init_colors)
+
+
+class Commands(Enum):
+    ADD_TASK = "eE"
+    SWITCH_TASKS = "fF"
+    STOP_RESUME = "sS"
+    DELETE_TASK = "dD"
+    RENAME_TASK = "rR"
+    FINISH_TASK = "xX"
+    QUIT = "qQ"
+
+    @classmethod
+    def match_command(cls, key):
+        if isinstance(key, int) and key >= 0:
+            try:
+                char = chr(key)
+            except ValueError:
+                return None
+            for command in cls:
+                if char in command.value:
+                    return command
+        return None
 
 
 class TaskManager:
     def __init__(self, stdscr: curses.window, db_url="sqlite:///tasks.db"):
-        curses.start_color()
-        curses.init_pair(1, curses.COLOR_WHITE, 236)
-        curses.init_pair(2, curses.COLOR_WHITE, 233)
-        curses.init_pair(3, 26, curses.COLOR_WHITE)
-        curses.init_pair(4, 233, curses.COLOR_WHITE)
-        curses.init_pair(5, 249, 236)
-        curses.init_pair(6, 249, 233)
-        curses.init_pair(7, curses.COLOR_RED, curses.COLOR_BLACK)
-
-        self.database = Database(db_url)
-        self.stdscr = stdscr
-        self.tasks = self.database.fetch_all_tasks()
-        self.show_finished = False
-        self.active_field = 0
+        self.__database = Database(db_url)
+        self.__stdscr = stdscr
+        self.__active_field = 0
+        self.__tasks = self.__database.fetch_all_tasks()
+        self.__show_finished = False
+        self.__stdscr.nodelay(True)
+        init_colors()
 
     def run(self):
-        self.stdscr.nodelay(True)
-        curses.curs_set(0)
-        while True:
-            draw_table(self.stdscr, self.tasks, self.active_field, self.show_finished)
-            a = self.stdscr.getch()
-            if a == ord("e"):
-                self.add_task()
-            elif a == ord("f"):
-                self.switch_tasks()
-            elif a == ord("q"):
-                break
-            if self.tasks:
-                if a == ord("s"):
-                    self.stop_resume_task()
-                elif a == ord("d"):
-                    self.delete_task()
-                elif a == ord("r"):
-                    self.update_task_name()
-                elif a == ord("x"):
-                    self.finish_task()
+        commands_map = {
+            Commands.ADD_TASK: self.add_task,
+            Commands.SWITCH_TASKS: self.switch_tasks,
+            Commands.STOP_RESUME: self.stop_resume_task,
+            Commands.DELETE_TASK: self.delete_task,
+            Commands.RENAME_TASK: self.update_task_name,
+            Commands.FINISH_TASK: self.finish_task,
+        }
 
-                elif a == curses.KEY_UP:
-                    self.active_field -= 1
-                    if self.active_field < 0:
-                        self.active_field = len(self.tasks) - 1
-                elif a == curses.KEY_DOWN:
-                    self.active_field += 1
-                    if self.active_field >= len(self.tasks):
-                        self.active_field = 0
+        while True:
+            draw_table(
+                self.__stdscr, self.__tasks, self.__active_field, self.__show_finished
+            )
+            key = self.__stdscr.getch()
+            command = Commands.match_command(key)
+
+            if command == Commands.QUIT:
+                break
+
+            if command in commands_map:
+                commands_map[command]()
+            elif key == curses.KEY_UP:
+                self.navigate_up()
+            elif key == curses.KEY_DOWN:
+                self.navigate_down()
             time.sleep(0.01)
 
     def finish_task(self):
-        task = self.tasks[self.active_field]
-        if confirmation(self.stdscr, "завершить", task.name):
+        if not self.__tasks:
+            return
+        task = self.__tasks[self.__active_field]
+        if confirmation(self.__stdscr, "завершить", task.name):
             task.finish()
             self.database.update_task(task.name, task)
             self.__update_tasks_list()
 
     def switch_tasks(self):
-        self.show_finished = not self.show_finished
+        self.__show_finished = not self.__show_finished
+        self.__active_field = 0
         self.__update_tasks_list()
-        self.active_field = 0
 
     def add_task(self):
-        task_name = get_task_name(self.stdscr)
+        task_name = get_task_name(self.__stdscr)
+        if task_name == "":
+            error_screen(self.__stdscr, "Пустой ввод или ошибка кодировки")
+            return
         new_task = Task(task_name)
         if self.database.add_task(new_task):
             self.__update_tasks_list()
         else:
-            error_screen(self.stdscr, "Задача с данным именем уже существует")
+            error_screen(self.__stdscr, "Задача с данным именем уже существует")
 
     def stop_resume_task(self):
-        task = self.tasks[self.active_field]
+        if not self.__tasks:
+            return
+        task = self.__tasks[self.__active_field]
         if task.finished:
-            error_screen(self.stdscr, "Задача уже завершена, начните новую")
+            error_screen(self.__stdscr, "Задача уже завершена, начните новую")
         else:
             if task.running:
                 task.stop()
@@ -88,26 +108,43 @@ class TaskManager:
             self.__update_tasks_list()
 
     def delete_task(self):
-        task = self.tasks[self.active_field]
-        if confirmation(self.stdscr, "удалить", task.name):
+        if not self.__tasks:
+            return
+        task = self.__tasks[self.__active_field]
+        if confirmation(self.__stdscr, "удалить", task.name):
             if self.database.delete_task(task.name):
                 self.__update_tasks_list()
             else:
-                error_screen(self.stdscr, "Ошибка базы данных")
+                error_screen(self.__stdscr, "Ошибка базы данных")
 
     def update_task_name(self):
-        task = self.tasks[self.active_field]
-        if confirmation(self.stdscr, "переименовать", task.name):
+        if not self.__tasks:
+            return
+        task = self.__tasks[self.__active_field]
+        if confirmation(self.__stdscr, "переименовать", task.name):
+            new_name = get_task_name(self.__stdscr)
+            if new_name == "":
+                error_screen(self.__stdscr, "Пустой ввод или ошибка кодировки")
+                return
             task_name = task.name
-            new_name = get_task_name(self.stdscr)
             task.name = new_name
             if self.database.update_task(task_name, task):
                 self.__update_tasks_list()
             else:
                 task.name = task_name
-                error_screen(self.stdscr, "Задача с данным именем уже существует")
+                error_screen(self.__stdscr, "Задача с данным именем уже существует")
+
+    def navigate_up(self):
+        self.__active_field -= 1
+        if self.__active_field < 0:
+            self.__active_field = len(self.__tasks) - 1
+
+    def navigate_down(self):
+        self.__active_field += 1
+        if self.__active_field >= len(self.__tasks):
+            self.__active_field = 0
 
     def __update_tasks_list(self):
-        self.tasks = self.database.fetch_all_tasks(self.show_finished)
-        if len(self.tasks) <= self.active_field:
-            self.active_field = len(self.tasks) - 1
+        self.__tasks = self.database.fetch_all_tasks(self.__show_finished)
+        if len(self.__tasks) <= self.__active_field:
+            self.__active_field = len(self.__tasks) - 1
